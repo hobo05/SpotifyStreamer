@@ -37,7 +37,6 @@ public class SearchActivity extends AppCompatActivity {
             Toast toast = Toast.makeText(this, String.format("Searched for: %s", query), Toast.LENGTH_SHORT);
             toast.show();
         }
-
     }
 
 
