@@ -3,16 +3,44 @@ package com.chengsoft.android.spotifystreamer;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v4.app.Fragment;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SearchView;
+import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ListView;
 import android.widget.Toast;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import kaaes.spotify.webapi.android.SpotifyApi;
+import kaaes.spotify.webapi.android.SpotifyService;
+import kaaes.spotify.webapi.android.models.Artist;
+import kaaes.spotify.webapi.android.models.ArtistsPager;
+import kaaes.spotify.webapi.android.models.Image;
 
 
 public class SearchActivity extends AppCompatActivity {
+
+    // We need a reference to the fragment so we can use it to search the artists
+    private PlaceholderFragment searchFragment;
+
+    public void setSearchFragment(PlaceholderFragment searchFragment) {
+        this.searchFragment = searchFragment;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,10 +60,14 @@ public class SearchActivity extends AppCompatActivity {
 
     private void handleIntent(Intent intent) {
         if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
-            String query = intent.getStringExtra(SearchManager.QUERY);
-            //use the query to search your data somehow
-            Toast toast = Toast.makeText(this, String.format("Searched for: %s", query), Toast.LENGTH_SHORT);
+            String artistName = intent.getStringExtra(SearchManager.QUERY);
+
+            // Show that we're searching
+            Toast toast = Toast.makeText(this, String.format("Searched for: %s", artistName), Toast.LENGTH_SHORT);
             toast.show();
+
+            // Search for artist
+            searchFragment.searchArtist(artistName);
         }
     }
 
@@ -49,9 +81,6 @@ public class SearchActivity extends AppCompatActivity {
         // Associate searchable configuration with the SearchView
         SearchManager searchManager =
                 (SearchManager) getSystemService(Context.SEARCH_SERVICE);
-        // New verson
-//        SearchView searchView =
-//                (SearchView) menu.findItem(R.id.action_search).getActionView();
         SearchView searchView = (SearchView)MenuItemCompat.getActionView(menu.findItem(R.id.action_search));
         searchView.setSearchableInfo(
                 searchManager.getSearchableInfo(getComponentName()));
@@ -73,5 +102,153 @@ public class SearchActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    public static class PlaceholderFragment extends Fragment {
+
+        private BeanAdapter<SpotifyArtist> mArtistAdapter;
+
+        public PlaceholderFragment() {
+        }
+
+        @Override
+        public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                                 Bundle savedInstanceState) {
+
+            Map<Integer, ViewContentSetter<View, SpotifyArtist>> contentSetterMap = new HashMap<>();
+            contentSetterMap.put(R.id.list_item_artist_name,
+                    SpotifyContentSetters.artistNameContentSetter());
+            contentSetterMap.put(R.id.list_item_artist_thumbnail,
+                    SpotifyContentSetters.artistThumbnailContentSetter(R.drawable.spotify));
+
+            mArtistAdapter = new BeanAdapter<>(
+                    // The current context, the fragment's parent activity
+                    getActivity(),
+                    // ID of the list item layout
+                    R.layout.list_item_artist,
+                    // artist data
+                    new ArrayList<SpotifyArtist>(),
+                    // Content setter map
+                    contentSetterMap);
+
+            View rootView = inflater.inflate(R.layout.fragment_search, container, false);
+
+            // Find list view by using its ID inside the rootView
+            ListView listViewArtist = (ListView) rootView.findViewById(R.id.listview_artists);
+
+            // Set the adapter to the dummy data
+            listViewArtist.setAdapter(mArtistAdapter);
+
+            // Set click listener for items
+            listViewArtist.setOnItemClickListener(
+                    new AdapterView.OnItemClickListener() {
+                        @Override
+                        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                            // Create explicit intent to call the DetailActivity
+                            Intent topTracksActivityIntent = new Intent(getActivity(), TopTracksActivity.class);
+                            // Set the artist name
+                            SpotifyArtist artist = mArtistAdapter.getItem(position);
+                            String artistName = artist.getName();
+                            topTracksActivityIntent.putExtra(Intent.EXTRA_TEXT, artistName);
+                            startActivity(topTracksActivityIntent);
+                        }
+                    }
+            );
+
+
+            // Set the fragment into the activity
+            SearchActivity searchActivity = (SearchActivity) getActivity();
+            searchActivity.setSearchFragment(this);
+
+            return rootView;
+        }
+
+        /**
+         * Search for an artist and update the {@link ListView}
+         * @param artistName The name of the artist to search for
+         */
+        public void searchArtist(String artistName) {
+            new SearchArtistTask(artistName).execute();
+        }
+
+        /**
+         * Show a toast for a short time
+         *
+         * @param message the message to display
+         */
+        private void makeToast(String message) {
+            Toast toast = Toast.makeText(
+                    getActivity(),
+                    message,
+                    Toast.LENGTH_SHORT);
+            toast.show();
+        }
+
+        private class SearchArtistTask extends AsyncTask<Void, Void, List<Artist>> {
+
+            private final String LOG_TAG = SearchArtistTask.class.getSimpleName();
+            private String artistName;
+
+            public SearchArtistTask(String artistName) {
+                this.artistName = artistName;
+            }
+
+            @Override
+            protected List<Artist> doInBackground(Void... params) {
+
+                SpotifyApi api = new SpotifyApi();
+                SpotifyService service = api.getService();
+                ArtistsPager pager = service.searchArtists(artistName);
+                List<Artist> artists = pager.artists.items;
+
+                return artists;
+            }
+
+            @Override
+            protected void onPostExecute(List<Artist> artists) {
+                // Display a toast to let user know if no artists were found
+                if (artists.isEmpty()) {
+                    makeToast(getString(R.string.no_artists_found));
+                    return;
+                }
+                // Log all the artists
+                for (Artist curArtist : artists) {
+                    Log.v(LOG_TAG, String.format("Id: %s Name: %s Type: %s", curArtist.id, curArtist.name, curArtist.type));
+                }
+
+                List<SpotifyArtist> spotifyArtists = new ArrayList<>();
+                Integer preferredWidth = 64;
+                for (Artist curArtist : artists) {
+                    // Find the appropriate thumbnail if any
+                    String thumbnailUrl = null;
+                    // Sort the images by descending width first
+                    Collections.sort(curArtist.images, new Comparator<Image>() {
+                        @Override
+                        public int compare(Image lhs, Image rhs) {
+                            // Sort by descending width
+                            return rhs.width - lhs.width;
+                        }
+                    });
+                    for (Image curImage : curArtist.images) {
+
+                        thumbnailUrl = curImage.url;
+                        // If the width is already at the preferred width or less,
+                        // stop looking and set the image
+                        // Otherwise, the last picture given will be the one that
+                        // will end up being the thumbnail
+                        if (curImage.width <= preferredWidth) {
+                            break;
+                        }
+                    }
+                    // Create a new spotify artist and add it to the list
+                    SpotifyArtist newArtist = new SpotifyArtist(curArtist.id, curArtist.name, thumbnailUrl);
+                    spotifyArtists.add(newArtist);
+                }
+
+                // Set the new artists in the adapter
+                mArtistAdapter.clear();
+                mArtistAdapter.addAll(spotifyArtists);
+            }
+        }
     }
 }
