@@ -1,4 +1,4 @@
-package com.chengsoft.android.spotifystreamer.model;
+package com.chengsoft.android.spotifystreamer.domain;
 
 /**
  * Track class for Spotify API

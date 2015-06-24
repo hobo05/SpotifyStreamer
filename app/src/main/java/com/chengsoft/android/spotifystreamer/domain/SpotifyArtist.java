@@ -1,4 +1,4 @@
-package com.chengsoft.android.spotifystreamer.model;
+package com.chengsoft.android.spotifystreamer.domain;
 
 /**
  * Artist class for Spotify API

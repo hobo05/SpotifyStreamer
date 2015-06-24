@@ -12,7 +12,7 @@ import android.view.ViewGroup;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import com.chengsoft.android.spotifystreamer.model.SpotifyTrack;
+import com.chengsoft.android.spotifystreamer.domain.SpotifyTrack;
 import com.chengsoft.android.spotifystreamer.support.BeanAdapter;
 
 import java.util.ArrayList;

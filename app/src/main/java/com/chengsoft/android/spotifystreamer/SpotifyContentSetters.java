@@ -1,7 +1,7 @@
 package com.chengsoft.android.spotifystreamer;
 
-import com.chengsoft.android.spotifystreamer.model.SpotifyArtist;
-import com.chengsoft.android.spotifystreamer.model.SpotifyTrack;
+import com.chengsoft.android.spotifystreamer.domain.SpotifyArtist;
+import com.chengsoft.android.spotifystreamer.domain.SpotifyTrack;
 import com.chengsoft.android.spotifystreamer.support.BeanAdapter;
 import com.chengsoft.android.spotifystreamer.support.ImageViewContentSetter;
 import com.chengsoft.android.spotifystreamer.support.TextViewContentSetter;

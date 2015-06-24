@@ -18,7 +18,7 @@ import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import com.chengsoft.android.spotifystreamer.model.SpotifyArtist;
+import com.chengsoft.android.spotifystreamer.domain.SpotifyArtist;
 import com.chengsoft.android.spotifystreamer.support.BeanAdapter;
 
 import java.util.ArrayList;
