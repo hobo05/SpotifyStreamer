@@ -1,7 +1,7 @@
-package com.chengsoft.android.spotifystreamer;
+package com.chengsoft.android.spotifystreamer.model;
 
 /**
- * Created by Tim on 6/22/2015.
+ * Artist class for Spotify API
  */
 public class SpotifyArtist {
     private String id;

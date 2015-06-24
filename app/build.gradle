@@ -29,14 +29,14 @@ repositories {
 }
 
 dependencies {
-
-    compile fileTree(dir: 'libs', include: ['*.jar']) // this line is already created in Android Studio
-
-    compile 'com.android.support:appcompat-v7:22.2.0' // you may need this line when targeting earlier Android APIs
-
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    // this line is already created in Android Studio
+    compile 'com.android.support:appcompat-v7:22.2.0'
+    // you may need this line when targeting earlier Android APIs
     // Add these lines
-    compile(name:'spotify-web-api-android-0.1.0', ext:'aar')
+    compile(name: 'spotify-web-api-android-0.1.0', ext: 'aar')
     compile 'com.squareup.picasso:picasso:2.5.2'
     compile 'com.squareup.retrofit:retrofit:1.9.0'
     compile 'com.squareup.okhttp:okhttp:2.2.0'
+    compile files('libs/openbeans-1.0.jar')
 }

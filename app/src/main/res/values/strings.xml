@@ -4,6 +4,6 @@
     <string name="action_settings">Settings</string>
     <string name="search_title">Search Title</string>
     <string name="search_hint">Search Artist</string>
-    <string name="title_activity_top_tracks">TopTracksActivity</string>
+    <string name="title_activity_top_tracks">Top 10 Tracks</string>
     <string name="no_artists_found">Could not find any artists</string>
 </resources>

@@ -1,58 +1,51 @@
 package com.chengsoft.android.spotifystreamer;
 
-import android.view.View;
-import android.widget.ImageView;
-import android.widget.TextView;
+import com.chengsoft.android.spotifystreamer.model.SpotifyArtist;
+import com.chengsoft.android.spotifystreamer.model.SpotifyTrack;
+import com.chengsoft.android.spotifystreamer.support.BeanAdapter;
+import com.chengsoft.android.spotifystreamer.support.ImageViewContentSetter;
+import com.chengsoft.android.spotifystreamer.support.TextViewContentSetter;
+import com.chengsoft.android.spotifystreamer.support.ViewContentSetter;
 
-import com.squareup.picasso.Picasso;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * {@link ViewContentSetter}s for the Spotify API
  */
 public class SpotifyContentSetters {
 
-    public static ViewContentSetter<View, SpotifyArtist> artistNameContentSetter() {
-        return new ArtistNameContentSetter();
-    }
+    /**
+     * Convenience method to return the {@link ViewContentSetter} map required
+     * for a {@link BeanAdapter} with type {@link SpotifyArtist}
+     *
+     * @return the content setter map
+     */
+    public static Map<Integer, ViewContentSetter<SpotifyArtist>> artistContentSetterMap() {
+        Map<Integer, ViewContentSetter<SpotifyArtist>> contentSetterMap = new HashMap<>();
+        contentSetterMap.put(R.id.list_item_artist_name,
+                new TextViewContentSetter<SpotifyArtist>("name"));
+        contentSetterMap.put(R.id.list_item_artist_thumbnail,
+               new ImageViewContentSetter<SpotifyArtist>("thumbnailUrl", R.drawable.spotify));
 
-    public static ViewContentSetter<View, SpotifyArtist> artistThumbnailContentSetter(int defaultImageResource) {
-        return new ArtistThumbnailContentSetter(defaultImageResource);
+        return contentSetterMap;
     }
 
     /**
-     * Content setter for {@link SpotifyArtist} name
+     * Convenience method to return the {@link ViewContentSetter} map required
+     * for a {@link BeanAdapter} with type {@link SpotifyTrack}
+     *
+     * @return the content setter map
      */
-    private static class ArtistNameContentSetter implements ViewContentSetter<View, SpotifyArtist> {
-        @Override
-        public void setViewContent(View view, SpotifyArtist artist) {
-            TextView textView = (TextView) view;
-            textView.setText(artist.getName());
-        }
+    public static Map<Integer, ViewContentSetter<SpotifyTrack>> topTracksContentSetterMap() {
+        Map<Integer, ViewContentSetter<SpotifyTrack>> contentSetterMap = new HashMap<>();
+        contentSetterMap.put(R.id.list_item_top_tracks_album,
+                new TextViewContentSetter<SpotifyTrack>("albumName"));
+        contentSetterMap.put(R.id.list_item_top_tracks_track,
+                new TextViewContentSetter<SpotifyTrack>("trackName"));
+        contentSetterMap.put(R.id.list_item_top_tracks_thumbnail,
+                new ImageViewContentSetter<SpotifyTrack>("smallThumbnailUrl", R.drawable.spotify));
+
+        return contentSetterMap;
     }
-
-    /**
-     * Content setter for {@link SpotifyArtist} thumbnail
-     */
-    private static class ArtistThumbnailContentSetter implements ViewContentSetter<View, SpotifyArtist> {
-
-        private int defaultImageResource;
-
-        public ArtistThumbnailContentSetter(int defaultImageResource) {
-            this.defaultImageResource = defaultImageResource;
-        }
-
-        @Override
-        public void setViewContent(View view, SpotifyArtist artist) {
-            ImageView imageView = (ImageView) view;
-
-            // Only set thumbnail if the url was set
-            if (artist.getThumbnailUrl() != null) {
-                Picasso.with(imageView.getContext()).load(artist.getThumbnailUrl()).into(imageView);
-            } else {
-                // Set the default if nothing was found
-                imageView.setImageResource(defaultImageResource);
-            }
-        }
-    }
-
 }

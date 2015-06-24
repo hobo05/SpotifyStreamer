@@ -1,4 +1,4 @@
-package com.chengsoft.android.spotifystreamer;
+package com.chengsoft.android.spotifystreamer.support;
 
 import android.content.Context;
 import android.util.Log;
@@ -17,7 +17,7 @@ import java.util.Map;
 public class BeanAdapter<T> extends ArrayAdapter<T> {
 
     private int resource;
-    private Map<Integer, ViewContentSetter<View, T>> resourceContentSetterMap;
+    private Map<Integer, ViewContentSetter<T>> resourceContentSetterMap;
     private final String LOG_TAG = BeanAdapter.class.getSimpleName();
 
     /**
@@ -29,7 +29,7 @@ public class BeanAdapter<T> extends ArrayAdapter<T> {
      * @param objects The objects to represent in the ListView.
      * @param resourceContentSetterMap  The map that ties the resource and a way to set the view
      */
-    public BeanAdapter(Context context, int resource, List<T> objects, Map<Integer, ViewContentSetter<View, T>> resourceContentSetterMap) {
+    public BeanAdapter(Context context, int resource, List<T> objects, Map<Integer, ViewContentSetter<T>> resourceContentSetterMap) {
         super(context, resource, objects);
         this.resource = resource;
         this.resourceContentSetterMap = resourceContentSetterMap;
@@ -48,19 +48,12 @@ public class BeanAdapter<T> extends ArrayAdapter<T> {
         }
 
         try {
-//            if (mFieldId == 0) {
-//                //  If no custom field is assigned, assume the whole resource is a TextView
-//                text = (TextView) view;
-//            } else {
-//                //  Otherwise, find the TextView field within the layout
-//                text = (TextView) view.findViewById(mFieldId);
-//            }
             T item = getItem(position);
-            for (Map.Entry<Integer, ViewContentSetter<View, T>> entry : resourceContentSetterMap.entrySet()) {
+            for (Map.Entry<Integer, ViewContentSetter<T>> entry : resourceContentSetterMap.entrySet()) {
                 // Find view to set content
                 View curView = view.findViewById(entry.getKey());
                 // Set the content of the view with the item
-                ViewContentSetter<View, T> contentSetter = entry.getValue();
+                ViewContentSetter<T> contentSetter = entry.getValue();
                 contentSetter.setViewContent(curView, item);
             }
         } catch (Exception e) {

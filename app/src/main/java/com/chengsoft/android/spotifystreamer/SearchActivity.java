@@ -9,7 +9,6 @@ import android.support.v4.app.Fragment;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SearchView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -19,12 +18,14 @@ import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.chengsoft.android.spotifystreamer.model.SpotifyArtist;
+import com.chengsoft.android.spotifystreamer.support.BeanAdapter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import kaaes.spotify.webapi.android.SpotifyApi;
 import kaaes.spotify.webapi.android.SpotifyService;
@@ -34,6 +35,10 @@ import kaaes.spotify.webapi.android.models.Image;
 
 
 public class SearchActivity extends AppCompatActivity {
+    // Intent constant
+    public static final String EXTRA_TOP_TRACKS_MAP = "searchTopTracksMap";
+    public static final String EXTRA_ARTIST_NAME = "artistName";
+    public static final String EXTRA_ARTIST_ID = "artistId";
 
     // We need a reference to the fragment so we can use it to search the artists
     private PlaceholderFragment searchFragment;
@@ -106,6 +111,8 @@ public class SearchActivity extends AppCompatActivity {
 
     public static class PlaceholderFragment extends Fragment {
 
+        private final String LOG_TAG = PlaceholderFragment.class.getSimpleName();
+
         private BeanAdapter<SpotifyArtist> mArtistAdapter;
 
         public PlaceholderFragment() {
@@ -115,12 +122,6 @@ public class SearchActivity extends AppCompatActivity {
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
 
-            Map<Integer, ViewContentSetter<View, SpotifyArtist>> contentSetterMap = new HashMap<>();
-            contentSetterMap.put(R.id.list_item_artist_name,
-                    SpotifyContentSetters.artistNameContentSetter());
-            contentSetterMap.put(R.id.list_item_artist_thumbnail,
-                    SpotifyContentSetters.artistThumbnailContentSetter(R.drawable.spotify));
-
             mArtistAdapter = new BeanAdapter<>(
                     // The current context, the fragment's parent activity
                     getActivity(),
@@ -129,7 +130,7 @@ public class SearchActivity extends AppCompatActivity {
                     // artist data
                     new ArrayList<SpotifyArtist>(),
                     // Content setter map
-                    contentSetterMap);
+                    SpotifyContentSetters.artistContentSetterMap());
 
             View rootView = inflater.inflate(R.layout.fragment_search, container, false);
 
@@ -146,10 +147,13 @@ public class SearchActivity extends AppCompatActivity {
                         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                             // Create explicit intent to call the DetailActivity
                             Intent topTracksActivityIntent = new Intent(getActivity(), TopTracksActivity.class);
-                            // Set the artist name
+                            // Set the artist name and id into the map
                             SpotifyArtist artist = mArtistAdapter.getItem(position);
-                            String artistName = artist.getName();
-                            topTracksActivityIntent.putExtra(Intent.EXTRA_TEXT, artistName);
+                            HashMap<String, String> extraTopTracksMap = new HashMap<String, String>();
+                            extraTopTracksMap.put(EXTRA_ARTIST_NAME, artist.getName());
+                            extraTopTracksMap.put(EXTRA_ARTIST_ID, artist.getId());
+                            topTracksActivityIntent.putExtra(EXTRA_TOP_TRACKS_MAP, extraTopTracksMap);
+                            // Start activity
                             startActivity(topTracksActivityIntent);
                         }
                     }
@@ -211,11 +215,8 @@ public class SearchActivity extends AppCompatActivity {
                     makeToast(getString(R.string.no_artists_found));
                     return;
                 }
-                // Log all the artists
-                for (Artist curArtist : artists) {
-                    Log.v(LOG_TAG, String.format("Id: %s Name: %s Type: %s", curArtist.id, curArtist.name, curArtist.type));
-                }
 
+                // Create list of artists from API
                 List<SpotifyArtist> spotifyArtists = new ArrayList<>();
                 Integer preferredWidth = 64;
                 for (Artist curArtist : artists) {
