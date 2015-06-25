@@ -172,7 +172,7 @@ public class SearchActivity extends AppCompatActivity {
          * @param artistName The name of the artist to search for
          */
         public void searchArtist(String artistName) {
-            new SearchArtistTask(artistName).execute();
+            new SearchArtistTask(artistName, 300).execute();
         }
 
         /**
@@ -192,9 +192,11 @@ public class SearchActivity extends AppCompatActivity {
 
             private final String LOG_TAG = SearchArtistTask.class.getSimpleName();
             private String artistName;
+            private Integer preferredThumbnailWidth;
 
-            public SearchArtistTask(String artistName) {
+            public SearchArtistTask(String artistName, Integer preferredThumbnailWidth) {
                 this.artistName = artistName;
+                this.preferredThumbnailWidth = preferredThumbnailWidth;
             }
 
             @Override
@@ -218,7 +220,6 @@ public class SearchActivity extends AppCompatActivity {
 
                 // Create list of artists from API
                 List<SpotifyArtist> spotifyArtists = new ArrayList<>();
-                Integer preferredWidth = 64;
                 for (Artist curArtist : artists) {
                     // Find the appropriate thumbnail if any
                     String thumbnailUrl = null;
@@ -237,7 +238,7 @@ public class SearchActivity extends AppCompatActivity {
                         // stop looking and set the image
                         // Otherwise, the last picture given will be the one that
                         // will end up being the thumbnail
-                        if (curImage.width <= preferredWidth) {
+                        if (curImage.width <= preferredThumbnailWidth) {
                             break;
                         }
                     }

@@ -5,5 +5,7 @@
     <string name="search_title">Search Title</string>
     <string name="search_hint">Search Artist</string>
     <string name="title_activity_top_tracks">Top 10 Tracks</string>
+    <string name="list_item_artist_thumbnail_description">artist thumbnail</string>
+    <string name="list_item_top_tracks_thumbnail_description">track album thumbnail</string>
     <string name="no_artists_found">Could not find any artists</string>
 </resources>

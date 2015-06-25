@@ -10,6 +10,7 @@ public class TextViewContentSetter<T> implements ViewContentSetter<T> {
 
     private String beanProperty;
     private PropertyUtils propertyUtils = PropertyUtils.getInstance();
+    private static final String LOG_TAG = TextViewContentSetter.class.getSimpleName();
 
     public TextViewContentSetter(String beanProperty) {
         this.beanProperty = beanProperty;
@@ -22,6 +23,7 @@ public class TextViewContentSetter<T> implements ViewContentSetter<T> {
         Object property = propertyUtils.readProperty(object, beanProperty);
         if (property != null) {
             textView.setText(property.toString());
+            textView.setSelected(true);
         }
     }
 }

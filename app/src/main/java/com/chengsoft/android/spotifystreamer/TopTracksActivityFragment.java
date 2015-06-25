@@ -76,7 +76,7 @@ public class TopTracksActivityFragment extends Fragment {
             actionBar.setSubtitle(artistName);
 
             // Retrieve the artist id and use it to retrieve the top tracks
-            new SearchTopTracksTask(artistId).execute();
+            new SearchTopTracksTask(artistId, 640, 300).execute();
         }
 
         return rootView;
@@ -98,9 +98,13 @@ public class TopTracksActivityFragment extends Fragment {
     private class SearchTopTracksTask extends AsyncTask<Void, Void, List<Track>> {
 
         private String artistId;
+        private Integer largePreferredWidth;
+        private Integer smallPreferredWidth;
 
-        public SearchTopTracksTask(String artistId) {
+        public SearchTopTracksTask(String artistId, Integer largePreferredWidth, Integer smallPreferredWidth) {
             this.artistId = artistId;
+            this.largePreferredWidth = largePreferredWidth;
+            this.smallPreferredWidth = smallPreferredWidth;
         }
 
         @Override
@@ -125,8 +129,6 @@ public class TopTracksActivityFragment extends Fragment {
 
             // Convert the tracks to SpotifyTracks
             List<SpotifyTrack> spotifyTracks = new ArrayList<>();
-            Integer largePreferredWidth = 640;
-            Integer smallPreferredWidth = 64;
             for (Track curTrack : artistTopTracks) {
                 // Find the appropriate thumbnail if any
                 String largeThumbnailUrl = null;
