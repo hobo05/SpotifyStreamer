@@ -6,7 +6,7 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
+import android.util.LruCache;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -41,6 +41,8 @@ public class TopTracksActivityFragment extends Fragment {
     private ListView listViewTopTracks;
     private ProgressBar topTracksProgressBar;
     private Integer mCrossfadeDuration;
+    // Store the last ten results
+    private LruCache<String, List<SpotifyTrack>> topTracksCache = new LruCache<>(10);
 
     private final String LOG_TAG = TopTracksActivityFragment.class.getSimpleName();
 
@@ -108,7 +110,7 @@ public class TopTracksActivityFragment extends Fragment {
         toast.show();
     }
 
-    private class SearchTopTracksTask extends AsyncTask<Void, Void, List<Track>> {
+    private class SearchTopTracksTask extends AsyncTask<Void, Void, List<SpotifyTrack>> {
 
         private String artistId;
         private Integer largePreferredWidth;
@@ -128,25 +130,58 @@ public class TopTracksActivityFragment extends Fragment {
         }
 
         @Override
-        protected List<Track> doInBackground(Void... params) {
+        protected List<SpotifyTrack> doInBackground(Void... params) {
+            // Check if the top tracks are in the cache, return if so
+            List<SpotifyTrack> artistTopTracks = topTracksCache.get(artistId);
+            if (artistTopTracks != null) {
+                return artistTopTracks;
+            }
+
+            // Otherwise call the API to retrieve the top tracks
             SpotifyApi api = new SpotifyApi();
             SpotifyService service = api.getService();
             // TODO Hard-code country code for now
             Map<String, Object> queryMap = new HashMap<>();
             queryMap.put("country", "US");
-            Tracks artistTopTracks = service.getArtistTopTrack(artistId, queryMap);
+            Tracks wrapperArtistTopTracks = service.getArtistTopTrack(artistId, queryMap);
+            List<Track> apiTracks = wrapperArtistTopTracks.tracks;
 
-            return artistTopTracks.tracks;
+            // Convert the tracks to SpotifyTracks and return it
+            artistTopTracks = new ArrayList<>();
+            if (apiTracks != null) {
+                // Process the tracks and put it in the cache
+                artistTopTracks = processTracks(apiTracks);
+                topTracksCache.put(artistId, artistTopTracks);
+            }
+            return artistTopTracks;
         }
 
         @Override
-        protected void onPostExecute(List<Track> artistTopTracks) {
+        protected void onPostExecute(List<SpotifyTrack> artistTopTracks) {
             // Display a message if can't find top tracks
-            if (artistTopTracks == null || artistTopTracks.isEmpty()) {
-                makeToast("Cannot find top tracks!");
+            if (artistTopTracks.isEmpty()) {
+                // Immediately show no results
+                ViewUtils.swap(listViewTopTracks, topTracksProgressBar);
+                makeToast(getString(R.string.no_top_tracks_found));
                 return;
             }
 
+            // Set the bean adapter
+            mTopTracksAdapter.clear();
+            mTopTracksAdapter.addAll(artistTopTracks);
+
+            // After call for tracks is done, hide the progress bar and show the results
+            ViewUtils.crossfade(listViewTopTracks, topTracksProgressBar, mCrossfadeDuration);
+
+        }
+
+        /**
+         * Convert the {@link Track}s from the API into our domain class {@link SpotifyTrack}
+         *
+         * @param artistTopTracks Tracks retrieved from the Spotify API
+         * @return list of {@link SpotifyTrack}
+         */
+        private List<SpotifyTrack> processTracks(List<Track> artistTopTracks) {
             // Convert the tracks to SpotifyTracks
             List<SpotifyTrack> spotifyTracks = new ArrayList<>();
             for (Track curTrack : artistTopTracks) {
@@ -181,14 +216,7 @@ public class TopTracksActivityFragment extends Fragment {
                         curTrack.preview_url);
                 spotifyTracks.add(newTrack);
             }
-
-            // Set the bean adapter
-            mTopTracksAdapter.clear();
-            mTopTracksAdapter.addAll(spotifyTracks);
-
-            // After call for tracks is done, hide the progress bar and show the results
-            ViewUtils.crossfade(listViewTopTracks, topTracksProgressBar, mCrossfadeDuration);
-
+            return spotifyTracks;
         }
     }
 }

@@ -68,11 +68,6 @@ public class SearchActivity extends AppCompatActivity {
     private void handleIntent(Intent intent) {
         if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
             String artistName = intent.getStringExtra(SearchManager.QUERY);
-
-            // Show that we're searching
-            Toast toast = Toast.makeText(this, String.format("Searched for: %s", artistName), Toast.LENGTH_SHORT);
-            toast.show();
-
             // Search for artist
             searchFragment.searchArtist(artistName);
         }
@@ -200,7 +195,7 @@ public class SearchActivity extends AppCompatActivity {
             toast.show();
         }
 
-        private class SearchArtistTask extends AsyncTask<Void, Void, List<Artist>> {
+        private class SearchArtistTask extends AsyncTask<Void, Void, List<SpotifyArtist>> {
 
             private final String LOG_TAG = SearchArtistTask.class.getSimpleName();
             private String artistName;
@@ -218,24 +213,46 @@ public class SearchActivity extends AppCompatActivity {
             }
 
             @Override
-            protected List<Artist> doInBackground(Void... params) {
+            protected List<SpotifyArtist> doInBackground(Void... params) {
 
                 SpotifyApi api = new SpotifyApi();
                 SpotifyService service = api.getService();
                 ArtistsPager pager = service.searchArtists(artistName);
                 List<Artist> artists = pager.artists.items;
 
-                return artists;
+                List<SpotifyArtist> spotifyArtists = new ArrayList<>();
+                if (artists != null) {
+                    spotifyArtists = processArtists(artists);
+                }
+
+                return spotifyArtists;
             }
 
             @Override
-            protected void onPostExecute(List<Artist> artists) {
+            protected void onPostExecute(List<SpotifyArtist> artists) {
                 // Display a toast to let user know if no artists were found
                 if (artists.isEmpty()) {
+                    // Immediately show no results
+                    ViewUtils.swap(listViewArtist, searchArtistProgressBar);
                     makeToast(getString(R.string.no_artists_found));
                     return;
                 }
 
+                // Set the new artists in the adapter
+                mArtistAdapter.clear();
+                mArtistAdapter.addAll(artists);
+
+                // After the search is done, hide the progress bar and show the results
+                ViewUtils.crossfade(listViewArtist, searchArtistProgressBar, mCrossfadeDuration);
+            }
+
+            /**
+             * * Convert the {@link Artist}s from the API into our domain class {@link SpotifyArtist}
+             *
+             * @param artists the artists to process and convert
+             * @return a list of {@link SpotifyArtist}s
+             */
+            private List<SpotifyArtist> processArtists(List<Artist> artists) {
                 // Create list of artists from API
                 List<SpotifyArtist> spotifyArtists = new ArrayList<>();
                 for (Artist curArtist : artists) {
@@ -264,13 +281,7 @@ public class SearchActivity extends AppCompatActivity {
                     SpotifyArtist newArtist = new SpotifyArtist(curArtist.id, curArtist.name, thumbnailUrl);
                     spotifyArtists.add(newArtist);
                 }
-
-                // Set the new artists in the adapter
-                mArtistAdapter.clear();
-                mArtistAdapter.addAll(spotifyArtists);
-
-                // After the search is done, hide the progress bar and show the results
-                ViewUtils.crossfade(listViewArtist, searchArtistProgressBar, mCrossfadeDuration);
+                return spotifyArtists;
             }
         }
     }

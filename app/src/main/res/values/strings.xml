@@ -8,4 +8,5 @@
     <string name="list_item_artist_thumbnail_description">artist thumbnail</string>
     <string name="list_item_top_tracks_thumbnail_description">track album thumbnail</string>
     <string name="no_artists_found">Could not find any artists</string>
+    <string name="no_top_tracks_found">Could not find any top tracks</string>
 </resources>
