@@ -6,14 +6,17 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.chengsoft.android.spotifystreamer.domain.SpotifyTrack;
 import com.chengsoft.android.spotifystreamer.support.BeanAdapter;
+import com.chengsoft.android.spotifystreamer.support.ViewUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,6 +38,9 @@ import kaaes.spotify.webapi.android.models.Tracks;
 public class TopTracksActivityFragment extends Fragment {
 
     private BeanAdapter<SpotifyTrack> mTopTracksAdapter;
+    private ListView listViewTopTracks;
+    private ProgressBar topTracksProgressBar;
+    private Integer mCrossfadeDuration;
 
     private final String LOG_TAG = TopTracksActivityFragment.class.getSimpleName();
 
@@ -46,6 +52,16 @@ public class TopTracksActivityFragment extends Fragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_top_tracks, container, false);
 
+        // Find list view by using its ID inside the rootView
+        listViewTopTracks = (ListView) rootView.findViewById(R.id.listview_top_tracks);
+        // Find progress bar
+        topTracksProgressBar = (ProgressBar) rootView.findViewById(R.id.top_tracks_progressBar);
+
+        // Retrieve and cache the system's default "medium" animation time.
+        mCrossfadeDuration = getResources().getInteger(
+                android.R.integer.config_mediumAnimTime);
+
+        // Create adapter
         mTopTracksAdapter = new BeanAdapter<SpotifyTrack>(
                 // The current context, the fragment's parent activity
                 getActivity(),
@@ -56,10 +72,7 @@ public class TopTracksActivityFragment extends Fragment {
                 // content setter map
                 SpotifyContentSetters.topTracksContentSetterMap());
 
-        // Find list view by using its ID inside the rootView
-        ListView listViewTopTracks = (ListView) rootView.findViewById(R.id.listview_top_tracks);
-
-        // Set the adapter to the dummy data
+        // Set the adapter to the ListView
         listViewTopTracks.setAdapter(mTopTracksAdapter);
 
         // Retrieve the EXTRA_TOP_TRACKS_MAP from the intent
@@ -100,11 +113,18 @@ public class TopTracksActivityFragment extends Fragment {
         private String artistId;
         private Integer largePreferredWidth;
         private Integer smallPreferredWidth;
+        private final String LOG_TAG = SearchTopTracksTask.class.getSimpleName();
 
         public SearchTopTracksTask(String artistId, Integer largePreferredWidth, Integer smallPreferredWidth) {
             this.artistId = artistId;
             this.largePreferredWidth = largePreferredWidth;
             this.smallPreferredWidth = smallPreferredWidth;
+        }
+
+        @Override
+        protected void onPreExecute() {
+            // When searching hide the results and show the progressbar
+            ViewUtils.swap(topTracksProgressBar, listViewTopTracks);
         }
 
         @Override
@@ -165,6 +185,10 @@ public class TopTracksActivityFragment extends Fragment {
             // Set the bean adapter
             mTopTracksAdapter.clear();
             mTopTracksAdapter.addAll(spotifyTracks);
+
+            // After call for tracks is done, hide the progress bar and show the results
+            ViewUtils.crossfade(listViewTopTracks, topTracksProgressBar, mCrossfadeDuration);
+
         }
     }
 }

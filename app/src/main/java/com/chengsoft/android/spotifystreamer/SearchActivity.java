@@ -16,10 +16,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.chengsoft.android.spotifystreamer.domain.SpotifyArtist;
 import com.chengsoft.android.spotifystreamer.support.BeanAdapter;
+import com.chengsoft.android.spotifystreamer.support.ViewUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -114,6 +116,9 @@ public class SearchActivity extends AppCompatActivity {
         private final String LOG_TAG = PlaceholderFragment.class.getSimpleName();
 
         private BeanAdapter<SpotifyArtist> mArtistAdapter;
+        private ProgressBar searchArtistProgressBar;
+        private Integer mCrossfadeDuration;
+        private ListView listViewArtist;
 
         public PlaceholderFragment() {
         }
@@ -122,6 +127,18 @@ public class SearchActivity extends AppCompatActivity {
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
 
+            View rootView = inflater.inflate(R.layout.fragment_search, container, false);
+
+            // Find list view by using its ID inside the rootView
+            listViewArtist = (ListView) rootView.findViewById(R.id.listview_artists);
+            // find the progressbar
+            searchArtistProgressBar = (ProgressBar) rootView.findViewById(R.id.search_artist_progressBar);
+
+            // Retrieve and cache the system's default "medium" animation time.
+            mCrossfadeDuration = getResources().getInteger(
+                    android.R.integer.config_mediumAnimTime);
+
+            // Create adapter
             mArtistAdapter = new BeanAdapter<>(
                     // The current context, the fragment's parent activity
                     getActivity(),
@@ -131,11 +148,6 @@ public class SearchActivity extends AppCompatActivity {
                     new ArrayList<SpotifyArtist>(),
                     // Content setter map
                     SpotifyContentSetters.artistContentSetterMap());
-
-            View rootView = inflater.inflate(R.layout.fragment_search, container, false);
-
-            // Find list view by using its ID inside the rootView
-            ListView listViewArtist = (ListView) rootView.findViewById(R.id.listview_artists);
 
             // Set the adapter to the dummy data
             listViewArtist.setAdapter(mArtistAdapter);
@@ -200,6 +212,12 @@ public class SearchActivity extends AppCompatActivity {
             }
 
             @Override
+            protected void onPreExecute() {
+                // When searching hide the results and show the progressbar
+                ViewUtils.swap(searchArtistProgressBar, listViewArtist);
+            }
+
+            @Override
             protected List<Artist> doInBackground(Void... params) {
 
                 SpotifyApi api = new SpotifyApi();
@@ -250,6 +268,9 @@ public class SearchActivity extends AppCompatActivity {
                 // Set the new artists in the adapter
                 mArtistAdapter.clear();
                 mArtistAdapter.addAll(spotifyArtists);
+
+                // After the search is done, hide the progress bar and show the results
+                ViewUtils.crossfade(listViewArtist, searchArtistProgressBar, mCrossfadeDuration);
             }
         }
     }
