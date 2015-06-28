@@ -37,12 +37,18 @@ import kaaes.spotify.webapi.android.models.Tracks;
  */
 public class TopTracksActivityFragment extends Fragment {
 
-    private BeanAdapter<SpotifyTrack> mTopTracksAdapter;
+    private BeanAdapter<SpotifyTrack> topTracksAdapter;
     private ListView listViewTopTracks;
     private ProgressBar topTracksProgressBar;
     private Integer mCrossfadeDuration;
+
     // Store the last ten results
     private LruCache<String, List<SpotifyTrack>> topTracksCache = new LruCache<>(10);
+
+    // Used to save/restore state
+    private static final String STATEFUL_TOP_TRACKS_SEARCH_BUNDLE = "topTracksSearchBundle";
+    private static final String STATEFUL_SPOTIFY_TRACK_LIST = "spotifyTrackList";
+    private Bundle extraTopTracksSearchBundle;
 
     private final String LOG_TAG = TopTracksActivityFragment.class.getSimpleName();
 
@@ -64,7 +70,7 @@ public class TopTracksActivityFragment extends Fragment {
                 android.R.integer.config_mediumAnimTime);
 
         // Create adapter
-        mTopTracksAdapter = new BeanAdapter<SpotifyTrack>(
+        topTracksAdapter = new BeanAdapter<SpotifyTrack>(
                 // The current context, the fragment's parent activity
                 getActivity(),
                 // ID of the list item layout
@@ -75,16 +81,21 @@ public class TopTracksActivityFragment extends Fragment {
                 SpotifyContentSetters.topTracksContentSetterMap());
 
         // Set the adapter to the ListView
-        listViewTopTracks.setAdapter(mTopTracksAdapter);
+        listViewTopTracks.setAdapter(topTracksAdapter);
 
-        // Retrieve the EXTRA_TOP_TRACKS_MAP from the intent
+        // Only handle the intent if it includes the EXTRA_TOP_TRACKS_BUNDLE
+        // and the list items are NOT saved
+        // The reason being, if we have the list items cached already, we
+        // don't need to kick off a SearchTopTracksTask
+        Boolean listItemSaved = savedInstanceState != null
+                && savedInstanceState.containsKey(STATEFUL_TOP_TRACKS_SEARCH_BUNDLE);
         Intent intent = getActivity().getIntent();
-        if (intent != null && intent.hasExtra(SearchActivity.EXTRA_TOP_TRACKS_MAP)) {
-            HashMap<String, String> extraTopTracksMap
-                    = (HashMap<String, String>)intent.getSerializableExtra(
-                                                SearchActivity.EXTRA_TOP_TRACKS_MAP);
-            String artistName = extraTopTracksMap.get(SearchActivity.EXTRA_ARTIST_NAME);
-            String artistId = extraTopTracksMap.get(SearchActivity.EXTRA_ARTIST_ID);
+        if (intent != null
+                && intent.hasExtra(SearchActivity.EXTRA_TOP_TRACKS_BUNDLE)
+                && !listItemSaved) {
+            extraTopTracksSearchBundle = intent.getBundleExtra(SearchActivity.EXTRA_TOP_TRACKS_BUNDLE);
+            String artistName = extraTopTracksSearchBundle.getString(SearchActivity.EXTRA_ARTIST_NAME);
+            String artistId = extraTopTracksSearchBundle.getString(SearchActivity.EXTRA_ARTIST_ID);
 
             // Set subtitle of activity's actionbar
             ActionBar actionBar = ((AppCompatActivity) getActivity()).getSupportActionBar();
@@ -95,6 +106,32 @@ public class TopTracksActivityFragment extends Fragment {
         }
 
         return rootView;
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        // Save top tracks bundle
+        outState.putBundle(STATEFUL_TOP_TRACKS_SEARCH_BUNDLE, extraTopTracksSearchBundle);
+
+        // Save list items
+        ArrayList<SpotifyTrack> spotifyTrackList = new ArrayList<>(topTracksAdapter.getValues());
+        outState.putParcelableArrayList(STATEFUL_TOP_TRACKS_SEARCH_BUNDLE, spotifyTrackList);
+
+        // Save view hierarchy
+        super.onSaveInstanceState(outState);
+    }
+
+    @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+        // restore view hierarchy
+        super.onActivityCreated(savedInstanceState);
+
+        // restore top tracks bundle and list items
+        if (savedInstanceState != null) {
+            extraTopTracksSearchBundle = savedInstanceState.getBundle(STATEFUL_TOP_TRACKS_SEARCH_BUNDLE);
+            ArrayList<SpotifyTrack> spotifyTrackList = savedInstanceState.getParcelableArrayList(STATEFUL_TOP_TRACKS_SEARCH_BUNDLE);
+            topTracksAdapter.replaceAll(spotifyTrackList);
+        }
     }
 
     /**
@@ -117,6 +154,13 @@ public class TopTracksActivityFragment extends Fragment {
         private Integer smallPreferredWidth;
         private final String LOG_TAG = SearchTopTracksTask.class.getSimpleName();
 
+        /**
+         * Constructor for {@link com.chengsoft.android.spotifystreamer.TopTracksActivityFragment.SearchTopTracksTask}
+         *
+         * @param artistId the artist id
+         * @param largePreferredWidth the preferred width for the preview track thumbnail
+         * @param smallPreferredWidth the preferred width for the list view thumbnail
+         */
         public SearchTopTracksTask(String artistId, Integer largePreferredWidth, Integer smallPreferredWidth) {
             this.artistId = artistId;
             this.largePreferredWidth = largePreferredWidth;
@@ -167,8 +211,8 @@ public class TopTracksActivityFragment extends Fragment {
             }
 
             // Set the bean adapter
-            mTopTracksAdapter.clear();
-            mTopTracksAdapter.addAll(artistTopTracks);
+            topTracksAdapter.clear();
+            topTracksAdapter.addAll(artistTopTracks);
 
             // After call for tracks is done, hide the progress bar and show the results
             ViewUtils.crossfade(listViewTopTracks, topTracksProgressBar, mCrossfadeDuration);

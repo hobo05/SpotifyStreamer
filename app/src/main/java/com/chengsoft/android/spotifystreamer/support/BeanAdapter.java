@@ -8,6 +8,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -16,8 +17,10 @@ import java.util.Map;
  */
 public class BeanAdapter<T> extends ArrayAdapter<T> {
 
-    private int resource;
-    private Map<Integer, ViewContentSetter<T>> resourceContentSetterMap;
+    protected int resource;
+    protected Map<Integer, ViewContentSetter<T>> resourceContentSetterMap;
+    protected List<T> mObjects;
+
     private final String LOG_TAG = BeanAdapter.class.getSimpleName();
 
     /**
@@ -31,6 +34,7 @@ public class BeanAdapter<T> extends ArrayAdapter<T> {
      */
     public BeanAdapter(Context context, int resource, List<T> objects, Map<Integer, ViewContentSetter<T>> resourceContentSetterMap) {
         super(context, resource, objects);
+        this.mObjects = objects;
         this.resource = resource;
         this.resourceContentSetterMap = resourceContentSetterMap;
     }
@@ -65,4 +69,22 @@ public class BeanAdapter<T> extends ArrayAdapter<T> {
         return view;
     }
 
+    /**
+     * Convenience method to call clear() and addAll()
+     *
+     * @param collection collection used to replace current values
+     */
+    public void replaceAll(Collection<? extends T> collection) {
+        this.clear();
+        this.addAll(collection);
+    }
+
+    /**
+     * Return the backing list of objects
+     *
+     * @return the backing list of objectss
+     */
+    public List<T> getValues() {
+        return mObjects;
+    }
 }

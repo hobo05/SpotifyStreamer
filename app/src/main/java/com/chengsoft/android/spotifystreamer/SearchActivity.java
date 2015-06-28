@@ -26,7 +26,6 @@ import com.chengsoft.android.spotifystreamer.support.ViewUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 
 import kaaes.spotify.webapi.android.SpotifyApi;
@@ -38,16 +37,9 @@ import kaaes.spotify.webapi.android.models.Image;
 
 public class SearchActivity extends AppCompatActivity {
     // Intent constant
-    public static final String EXTRA_TOP_TRACKS_MAP = "searchTopTracksMap";
+    public static final String EXTRA_TOP_TRACKS_BUNDLE = "searchTopTracksBundle";
     public static final String EXTRA_ARTIST_NAME = "artistName";
     public static final String EXTRA_ARTIST_ID = "artistId";
-
-    // We need a reference to the fragment so we can use it to search the artists
-    private PlaceholderFragment searchFragment;
-
-    public void setSearchFragment(PlaceholderFragment searchFragment) {
-        this.searchFragment = searchFragment;
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,18 +51,40 @@ public class SearchActivity extends AppCompatActivity {
         handleIntent(getIntent());
     }
 
+    /**
+     * Handles a new artist search is passed to the activity while it exists
+     *
+     * @param intent
+     */
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         handleIntent(intent);
     }
 
+    /**
+     * Handle the artist search {@link Intent}
+     *
+     * @param intent the search {@link Intent}
+     */
     private void handleIntent(Intent intent) {
         if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
-            String artistName = intent.getStringExtra(SearchManager.QUERY);
-            // Search for artist
-            searchFragment.searchArtist(artistName);
+            // Retrieve the artist name and search for the artist
+            String currentArtistName = intent.getStringExtra(SearchManager.QUERY);
+            searchArtist(currentArtistName);
         }
+    }
+
+    /**
+     * Search for artist using the {@link com.chengsoft.android.spotifystreamer.SearchActivity.SearchFragment}
+     *
+     * @param artistName the artist name
+     */
+    private void searchArtist(String artistName) {
+        // Retrieve the SearchFragment and search for artist
+        SearchFragment searchFragment =
+                (SearchFragment) getSupportFragmentManager().findFragmentById(R.id.search_fragment);
+        searchFragment.searchArtist(artistName);
     }
 
 
@@ -106,17 +120,17 @@ public class SearchActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    public static class PlaceholderFragment extends Fragment {
+    public static class SearchFragment extends Fragment {
 
-        private final String LOG_TAG = PlaceholderFragment.class.getSimpleName();
+        private final String LOG_TAG = SearchFragment.class.getSimpleName();
 
-        private BeanAdapter<SpotifyArtist> mArtistAdapter;
+        private BeanAdapter<SpotifyArtist> artistAdapter;
         private ProgressBar searchArtistProgressBar;
         private Integer mCrossfadeDuration;
         private ListView listViewArtist;
+        private static final String STATEFUL_SPOTIFY_ARTIST_LIST = "spotifyArtistList";
 
-        public PlaceholderFragment() {
-        }
+        public SearchFragment() {}
 
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -134,7 +148,7 @@ public class SearchActivity extends AppCompatActivity {
                     android.R.integer.config_mediumAnimTime);
 
             // Create adapter
-            mArtistAdapter = new BeanAdapter<>(
+            artistAdapter = new BeanAdapter<>(
                     // The current context, the fragment's parent activity
                     getActivity(),
                     // ID of the list item layout
@@ -145,7 +159,7 @@ public class SearchActivity extends AppCompatActivity {
                     SpotifyContentSetters.artistContentSetterMap());
 
             // Set the adapter to the dummy data
-            listViewArtist.setAdapter(mArtistAdapter);
+            listViewArtist.setAdapter(artistAdapter);
 
             // Set click listener for items
             listViewArtist.setOnItemClickListener(
@@ -155,28 +169,45 @@ public class SearchActivity extends AppCompatActivity {
                             // Create explicit intent to call the DetailActivity
                             Intent topTracksActivityIntent = new Intent(getActivity(), TopTracksActivity.class);
                             // Set the artist name and id into the map
-                            SpotifyArtist artist = mArtistAdapter.getItem(position);
-                            HashMap<String, String> extraTopTracksMap = new HashMap<String, String>();
-                            extraTopTracksMap.put(EXTRA_ARTIST_NAME, artist.getName());
-                            extraTopTracksMap.put(EXTRA_ARTIST_ID, artist.getId());
-                            topTracksActivityIntent.putExtra(EXTRA_TOP_TRACKS_MAP, extraTopTracksMap);
+                            SpotifyArtist artist = artistAdapter.getItem(position);
+                            Bundle extraTopTracksBundle = new Bundle();
+                            extraTopTracksBundle.putString(EXTRA_ARTIST_NAME, artist.getName());
+                            extraTopTracksBundle.putString(EXTRA_ARTIST_ID, artist.getId());
+                            topTracksActivityIntent.putExtra(EXTRA_TOP_TRACKS_BUNDLE, extraTopTracksBundle);
                             // Start activity
                             startActivity(topTracksActivityIntent);
                         }
                     }
             );
 
-
-            // Set the fragment into the activity
-            SearchActivity searchActivity = (SearchActivity) getActivity();
-            searchActivity.setSearchFragment(this);
-
             return rootView;
+        }
+
+        @Override
+        public void onSaveInstanceState(Bundle outState) {
+            // Save SpotifyArtists
+            ArrayList<SpotifyArtist> spotifyArtistList = new ArrayList<>(artistAdapter.getValues());
+            outState.putParcelableArrayList(STATEFUL_SPOTIFY_ARTIST_LIST, spotifyArtistList);
+
+            // Save view hierarchy
+            super.onSaveInstanceState(outState);
+        }
+
+        @Override
+        public void onActivityCreated(Bundle savedInstanceState) {
+            // Restore view hierarchy
+            super.onActivityCreated(savedInstanceState);
+
+            // Restore the artist list
+            if (savedInstanceState != null) {
+                List<SpotifyArtist> spotifyArtistList = savedInstanceState.getParcelableArrayList(STATEFUL_SPOTIFY_ARTIST_LIST);
+                artistAdapter.replaceAll(spotifyArtistList);
+            }
         }
 
         /**
          * Search for an artist and update the {@link ListView}
-         * @param artistName The name of the artist to search for
+         * @param artistName The name ofonSaveInstanceState the artist to search for
          */
         public void searchArtist(String artistName) {
             new SearchArtistTask(artistName, 300).execute();
@@ -239,8 +270,7 @@ public class SearchActivity extends AppCompatActivity {
                 }
 
                 // Set the new artists in the adapter
-                mArtistAdapter.clear();
-                mArtistAdapter.addAll(artists);
+                artistAdapter.replaceAll(artists);
 
                 // After the search is done, hide the progress bar and show the results
                 ViewUtils.crossfade(listViewArtist, searchArtistProgressBar, mCrossfadeDuration);
