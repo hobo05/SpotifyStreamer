@@ -5,7 +5,9 @@ import android.animation.AnimatorListenerAdapter;
 import android.view.View;
 
 /**
- * Created by Tim on 6/25/2015.
+ * Utility class for switching/crossfading views.
+ *
+ * @see <a href="http://developer.android.com/training/animation/crossfade.html">Android Crossfade</a>
  */
 public class ViewUtils {
 
